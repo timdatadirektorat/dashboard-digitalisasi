@@ -166,7 +166,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--gray);color:var(--text);f
     <div class="nav-tab active" onclick="showPage('nasional',this)">&#9670; Nasional</div>
     <div class="nav-tab" onclick="showPage('wilayah',this)">&#9671; Daerah</div>
     <div class="nav-tab" onclick="showPage('sekolah',this)">&#9671; Data Rinci Sekolah</div>
-    <div class="nav-tab" onclick="showPage('geografi',this)">&#9671; Geografi &amp; Ketimpangan</div>
     <div class="nav-tab" onclick="showPage('summary',this)">&#9671; Summary</div>
   </div>
 </div>
@@ -371,34 +370,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--gray);color:var(--text);f
   <div id="sDetailWrap" style="display:none"><div class="detail-panel" id="sDetailPanel"></div></div>
 
   <div class="footer" id="fSek"></div>
-</div>
-
-<!-- ═══ GEOGRAFI & KETIMPANGAN ═══ -->
-<div class="page" id="geografi">
-  <div class="ph"><div><h1>Geografi &amp; Ketimpangan Distribusi</h1><p>Klaster provinsi, analisis Pareto, sebaran capaian, dan konsentrasi masalah distribusi</p></div></div>
-  <div class="g4" id="geoScores"></div>
-  <div class="card" id="geoInsightCard">
-    <div class="ct">&#128202; Kondisi Ketimpangan Distribusi</div>
-    <div class="cs">Ringkasan otomatis temuan kesenjangan distribusi antar wilayah</div>
-    <div id="geoInsight"><div class="skel" style="height:60px;width:100%"> </div></div>
-  </div>
-  <div class="card"><div class="ct">Klaster Provinsi Berdasarkan Tingkat Capaian IFP</div><div class="cs">Pengelompokan seluruh provinsi ke dalam 4 kategori — hover untuk detail</div><div id="geoKlaster"><div class="skel" style="height:160px;width:100%"> </div></div></div>
-  <div class="g2">
-    <div class="card"><div class="ct">Analisis Pareto — Konsentrasi Sekolah Belum Menerima IFP</div><div class="cs">Berapa persen kab/kota menyumbang 80% dari sekolah yang belum menerima IFP</div><div id="geoPareto"><div class="skel" style="height:200px;width:100%"> </div></div></div>
-    <div class="card"><div class="ct">Sebaran Capaian IFP Seluruh Provinsi</div><div class="cs">Hover untuk melihat nilai capaian masing-masing provinsi</div><div id="geoSebaran"><div class="skel" style="height:200px;width:100%"> </div></div></div>
-  </div>
-  <div class="card"><div class="ct">Kabupaten/Kota Prioritas — Terbanyak Sekolah Belum Menerima IFP</div><div class="cs">30 kab/kota teratas secara nasional</div>
-    <div class="tw"><table class="tbl tbl-alt" id="tblPareto">
-      <thead><tr>
-        <th style="width:4%">No</th><th style="width:25%">Kab/Kota</th><th style="width:22%">Provinsi</th>
-        <th style="width:11%;text-align:center">Belum IFP</th><th style="width:11%;text-align:center">Belum Laptop</th>
-        <th style="width:10%;text-align:center">Total</th><th style="width:9%;text-align:center">% Belum IFP</th>
-        <th style="width:8%;text-align:center">Kumulatif</th>
-      </tr></thead>
-      <tbody id="tblParetoB"></tbody>
-    </table></div>
-  </div>
-  <div class="footer" id="fGeo"></div>
 </div>
 
 <!-- ═══ SUMMARY ═══ -->
@@ -626,12 +597,11 @@ function processData(raw){
   document.getElementById('updBadge').textContent='Data: '+upd;
   document.getElementById('phR').textContent=fmt(D.length)+' sekolah — per '+upd;
   const ft='Data: '+upd+' — Dashboard Digitalisasi Pembelajaran Direktorat SMP';
-  ['fNas','fWil','fSek','fGeo','fSum'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=ft;});
+  ['fNas','fWil','fSek','fSum'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=ft;});
   populateFilters();
   renderNasional();
   renderWilayah();
   fS=[...D];renderSekolahAll();
-  renderGeografi();
   renderSummary();
 }
 
@@ -968,96 +938,6 @@ function sortS(col){
   const k=keys[col];if(!k)return;
   fS.sort((a,b)=>{const va=isNaN(a[k])?(a[k]||'').toLowerCase():+a[k],vb=isNaN(b[k])?(b[k]||'').toLowerCase():+b[k];return va<vb?-sortDS:va>vb?sortDS:0;});
   pageS=1;renderSekolahTable();
-}
-
-// ═══ GEOGRAFI ═══
-function renderGeografi(){
-  const tot=D.length,jI=D.filter(r=>r.i>0).length,jL=D.filter(r=>r.l>0).length;
-  const jE=D.filter(r=>r.e>0).length,jR=D.filter(r=>r.r>0).length;
-  const belum=D.filter(r=>r.i===0&&r.l===0).length;
-  const pT={},pI={},kabProv={},kabTot={},kabBelumIFP={},kabBelumLap={};
-  D.forEach(r=>{
-    pT[r.p]=(pT[r.p]||0)+1;
-    if(r.i>0)pI[r.p]=(pI[r.p]||0)+1;
-    kabProv[r.k]=r.p;kabTot[r.k]=(kabTot[r.k]||0)+1;
-    if(r.i===0)kabBelumIFP[r.k]=(kabBelumIFP[r.k]||0)+1;
-    if(r.l===0)kabBelumLap[r.k]=(kabBelumLap[r.k]||0)+1;
-  });
-  const provs=Object.keys(pT);
-  const pcts=provs.map(p=>(pI[p]||0)/pT[p]*100);
-  const mean=pcts.reduce((a,b)=>a+b,0)/pcts.length;
-  const std=Math.sqrt(pcts.reduce((a,b)=>a+(b-mean)**2,0)/pcts.length);
-  const cv=std/mean*100;
-
-  document.getElementById('geoScores').innerHTML=
-    '<div class="sc ab"><div class="sc-l">Rata-rata Capaian IFP</div><div class="sc-v" style="color:var(--blue)">'+mean.toFixed(1).replace('.',',')+'%</div><div class="sc-s">rerata per provinsi</div></div>'+
-    '<div class="sc ay"><div class="sc-l">Simpangan Baku</div><div class="sc-v" style="color:var(--yellow-d)">'+std.toFixed(2).replace('.',',')+'</div><div class="sc-s">poin persentase</div></div>'+
-    '<div class="sc ar"><div class="sc-l">Koefisien Variasi</div><div class="sc-v" style="color:var(--red-d)">'+cv.toFixed(2).replace('.',',')+'%</div><div class="sc-s">semakin kecil = semakin merata</div></div>'+
-    '<div class="sc ag"><div class="sc-l">Selisih Maks \u2013 Min</div><div class="sc-v" style="color:var(--green)">'+(Math.max(...pcts)-Math.min(...pcts)).toFixed(1).replace('.',',')+'</div><div class="sc-s">poin persentase</div></div>';
-
-  const rankIFP=provs.map(p=>({p,n:pI[p]||0,t:pT[p],pc:(pI[p]||0)/pT[p]*100})).sort((a,b)=>b.pc-a.pc);
-  const best=rankIFP[0],worst=rankIFP[rankIFP.length-1];
-  const outlier=rankIFP.filter(r=>r.pc<mean-std);
-  document.getElementById('geoInsight').innerHTML=[
-    {cls:'ib',ico:'&#128202;',txt:'Rata-rata capaian IFP nasional per provinsi adalah <strong>'+mean.toFixed(1).replace('.',',')+'%</strong> dengan simpangan baku <strong>'+std.toFixed(2).replace('.',',')+' poin persentase</strong>.'},
-    {cls:'ig',ico:'&#127942;',txt:'Provinsi dengan capaian IFP tertinggi: <strong>'+best.p.replace('Prov. ','')+'</strong> ('+best.pc.toFixed(1).replace('.',',')+'%) dengan '+fmt(best.n)+' dari '+fmt(best.t)+' sekolah sudah menerima.'},
-    worst.pc<90?{cls:'ir',ico:'&#9888;',txt:'Provinsi dengan capaian IFP terendah: <strong>'+worst.p.replace('Prov. ','')+'</strong> ('+worst.pc.toFixed(1).replace('.',',')+'%) — masih ada '+fmt(worst.t-worst.n)+' sekolah belum menerima IFP.'}:null,
-    outlier.length?{cls:'iy',ico:'&#9432;',txt:'Terdapat <strong>'+outlier.length+' provinsi</strong> dengan capaian IFP di bawah 1 standar deviasi dari rata-rata: '+outlier.map(r=>r.p.replace('Prov. ','')).join(', ')+'.'}:null,
-  ].filter(Boolean).map(i=>'<div class="ins '+i.cls+'"><span class="ins-ico">'+i.ico+'</span><span>'+i.txt+'</span></div>').join('');
-
-  const klDef=[
-    {label:'Kategori I \u2014 Capaian Tinggi',min:98,col:'var(--green)',bg:'var(--green-l)',desc:'Capaian IFP \u2265 98%'},
-    {label:'Kategori II \u2014 Capaian Baik',min:95,col:'var(--blue)',bg:'var(--blue-l)',desc:'Capaian IFP 95\u201398%'},
-    {label:'Kategori III \u2014 Capaian Sedang',min:90,col:'var(--yellow)',bg:'var(--yellow-l)',desc:'Capaian IFP 90\u201395%'},
-    {label:'Kategori IV \u2014 Capaian Rendah',min:0,col:'var(--red)',bg:'var(--red-l)',desc:'Capaian IFP < 90%'},
-  ];
-  const klMap={};provs.forEach(p=>{const pc=(pI[p]||0)/pT[p]*100;klMap[p]={pc,k:klDef.find(k=>pc>=k.min)||klDef[3]};});
-  document.getElementById('geoKlaster').innerHTML=klDef.map(k=>{
-    const m=provs.filter(p=>klMap[p].k.label===k.label).sort((a,b)=>klMap[b].pc-klMap[a].pc);
-    if(!m.length)return '';
-    return '<div style="margin-bottom:10px">'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-      '<span style="background:'+k.col+';color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">'+k.label+'</span>'+
-      '<span style="font-size:11px;color:var(--muted)">'+k.desc+' \u2014 '+m.length+' provinsi</span></div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:5px">'+
-      m.map(p=>{const tipHtml='<strong>'+p+'</strong><br>Capaian IFP: '+klMap[p].pc.toFixed(1).replace('.',',')+'%<br>'+fmt(pI[p]||0)+'/'+fmt(pT[p])+' sekolah';
-        return '<span style="background:'+k.bg+';border:1px solid '+k.col+'30;padding:3px 10px;border-radius:6px;font-size:10px;cursor:default" onmouseenter="showTip(event,\''+tipHtml.replace(/'/g,"&#39;")+'\')" onmouseleave="hideTip()">'+p.replace('Prov. ','')+'<span style="font-size:9px;color:var(--hint);margin-left:4px">'+klMap[p].pc.toFixed(0)+'%</span></span>';
-      }).join('')+'</div></div>';
-  }).join('');
-
-  const belumIFParr=Object.entries(kabBelumIFP).sort((a,b)=>b[1]-a[1]);
-  const totalBI=belumIFParr.reduce((s,e)=>s+e[1],0);
-  let cum=0,p80=belumIFParr.length;
-  belumIFParr.forEach(([k,n],i)=>{cum+=n;if(cum/totalBI<=0.8)p80=i+1;});
-  document.getElementById('geoPareto').innerHTML=
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">'+
-    '<div style="text-align:center;padding:12px;background:var(--red-l);border-radius:8px"><div style="font-size:28px;font-weight:600;color:var(--red-d)">'+p80+'</div><div style="font-size:11px;color:var(--muted);margin-top:3px">kab/kota</div><div style="font-size:10px;color:var(--hint);margin-top:2px">menyumbang 80% dari '+fmt(totalBI)+' sekolah belum IFP</div></div>'+
-    '<div style="text-align:center;padding:12px;background:var(--blue-l);border-radius:8px"><div style="font-size:28px;font-weight:600;color:var(--blue)">'+(p80/belumIFParr.length*100).toFixed(1).replace('.',',')+' %</div><div style="font-size:11px;color:var(--muted);margin-top:3px">dari '+belumIFParr.length+' kab/kota</div></div>'+
-    '</div>'+barHTML(belumIFParr.slice(0,15).map(([k,n])=>[k,n,'var(--red-d)',pct(n,totalBI)+' dari total belum IFP']),'bl-lg',totalBI);
-
-  const provSort=provs.map(p=>({p,pc:(pI[p]||0)/pT[p]*100})).sort((a,b)=>a.pc-b.pc);
-  document.getElementById('geoSebaran').innerHTML=
-    '<div style="margin-bottom:8px;font-size:10px;color:var(--hint)">Rata-rata: <strong>'+mean.toFixed(2).replace('.',',')+'%</strong> &nbsp;|&nbsp; Simpangan baku: <strong>\u00b1'+std.toFixed(2).replace('.',',')+' pp</strong></div>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:4px">'+
-    provSort.map(r=>{
-      const c=r.pc<90?'var(--red)':r.pc<95?'var(--yellow)':r.pc<98?'var(--blue)':'var(--green)';
-      const bg=r.pc<90?'var(--red-l)':r.pc<95?'var(--yellow-l)':r.pc<98?'var(--blue-l)':'var(--green-l)';
-      const tipHtml='<strong>'+r.p+'</strong><br>IFP: '+r.pc.toFixed(2).replace('.',',')+'% ('+fmt(pT[r.p])+' sekolah)';
-      return '<span style="background:'+bg+';border:1px solid '+c+'30;padding:3px 9px;border-radius:5px;font-size:10px;cursor:default" onmouseenter="showTip(event,\''+tipHtml.replace(/'/g,"&#39;")+'\')" onmouseleave="hideTip()">'+r.p.replace('Prov. ','')+'<span style="font-size:9px;color:'+c+';font-weight:600;margin-left:3px">'+r.pc.toFixed(0)+'%</span></span>';
-    }).join('')+'</div>';
-
-  let cumBI2=0;
-  document.getElementById('tblParetoB').innerHTML=belumIFParr.slice(0,30).map(([k,n],i)=>{
-    cumBI2+=n;
-    const lapN=kabBelumLap[k]||0,totKab=kabTot[k]||0;
-    const pctBI=totKab?(n/totKab*100).toFixed(1).replace('.',',')+'%':'—';
-    return '<tr><td>'+(i+1)+'.</td><td><strong>'+k+'</strong></td><td style="font-size:10px">'+( kabProv[k]||'—')+'</td>'+
-      '<td style="text-align:center;color:var(--red-d);font-weight:600">'+n+'</td>'+
-      '<td style="text-align:center">'+lapN+'</td>'+
-      '<td style="text-align:center">'+fmt(totKab)+'</td>'+
-      '<td style="text-align:center"><span class="pill '+(parseFloat(pctBI)>20?'pill-red':parseFloat(pctBI)>10?'pill-yellow':'pill-blue')+'">'+pctBI+'</span></td>'+
-      '<td style="text-align:center;font-weight:600;color:var(--muted)">'+(cumBI2/totalBI*100).toFixed(1).replace('.',',')+' %</td></tr>';
-  }).join('');
 }
 
 // ═══ SUMMARY ═══
